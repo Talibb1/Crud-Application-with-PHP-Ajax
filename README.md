@@ -1,12 +1,12 @@
 # Signup-Login-with-PHP
 
 ## Login
-<img src="Assets/img/Login_Screenshot.png" width="100%" />
+<img src="Assets/img/Screenshot 2023-11-18 180032.png" width="100%" />
 
 ## Signup
-<img src="Assets/img/Signup_Screenshot.png" width="100%" />
+<img src="Assets/img/Screenshot 2023-11-18 180050.png" width="100%" />
 
 ## Forgot-password
-<img src="Assets/img/Forgot-password Screenshot.png" width="50%" />
+<img src="Assets/img/Screenshot 2023-11-18 180115.png" width="50%" />
 
 
