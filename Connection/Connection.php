@@ -1,6 +1,6 @@
 <!-- Database connected -->
 <?php
-    define('server',"mysql:host=localhost;dbname=crud_application");
+    define('server',"mysql:host=localhost;dbname=application");
     define('user',"root");
     define('password',"");
     try
