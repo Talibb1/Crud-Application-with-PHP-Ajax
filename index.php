@@ -8,70 +8,36 @@ $single_product_prepare = $connection->prepare($single_product_query);
 $single_product_prepare->execute();
 $single_product = $single_product_prepare->fetchAll(PDO::FETCH_ASSOC);
 
-// Perform the delete operation
+    //  Delete section starting
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
     $prodId = $_POST['prodId'];
+
+    // Fetch the image file name
+    $fetch_image_query = "SELECT product_image FROM `crud_application` WHERE `user_id` = :prodId";
+    $fetch_image_prepare = $connection->prepare($fetch_image_query);
+    $fetch_image_prepare->bindParam(':prodId', $prodId, PDO::PARAM_INT);
+    $fetch_image_prepare->execute();
+    $imageData = $fetch_image_prepare->fetch(PDO::FETCH_ASSOC);
 
     $delete_query = "DELETE FROM `crud_application` WHERE `user_id` = :prodId";
     $delete_prepare = $connection->prepare($delete_query);
     $delete_prepare->bindParam(':prodId', $prodId, PDO::PARAM_INT);
-
+    
     if ($delete_prepare->execute()) {
+        // Unlink (delete) the image file from the folder
+        $imageFilePath = "Assets/img/" . $imageData['product_image'];
+        if (file_exists($imageFilePath)) {
+            unlink($imageFilePath);
+        }
+
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
     } else {
         echo "Error deleting record.";
     }
 }
-// / Perform the delete operation
+ //  Delete section ending
 
-$prodId = $_SESSION['prodId'];
-// Fetch existing data
-$fetch_doctor_query = "SELECT * FROM `crud_application` WHERE `user_id` = :prodId";
-$fetch_doctor_prepare = $connection->prepare($fetch_doctor_query);
-$fetch_doctor_prepare->bindParam(':prodId', $prodId);
-$fetch_doctor_prepare->execute();
-$doctorInfo = $fetch_doctor_prepare->fetch(PDO::FETCH_ASSOC);
-
-// Update existing data if the form is submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_image'])) {
-    // Handle image upload
-    if ($_FILES['update_image']['name'] !== "") {
-        $uploadDir = "Assets/img/";
-        $uploadedFile = $uploadDir . basename($_FILES['update_image']['name']);
-        move_uploaded_file($_FILES['update_image']['tmp_name'], $uploadedFile);
-
-        // Update image in the database
-        $update_image_query = "UPDATE `crud_application` SET `product_image` = :product_image WHERE `user_id` = :prodId";
-        $update_image_prepare = $connection->prepare($update_image_query);
-        $update_image_prepare->bindParam(':product_image', $_FILES['update_image']['name']);
-        $update_image_prepare->bindParam(':prodId', $prodId);
-        $update_image_prepare->execute();
-    }
-
-    // Update the rest of the product information
-    $update_product_query = "UPDATE `crud_application` SET 
-        `product_name` = :product_name, 
-        `product_description` = :product_description, 
-        `product_price` = :product_price
-        WHERE `user_id` = :prodId";
-
-    $update_product_prepare = $connection->prepare($update_product_query);
-    $update_product_prepare->bindParam(':product_name', $_POST['update_name']);
-    $update_product_prepare->bindParam(':product_description', $_POST['update_description']);
-    $update_product_prepare->bindParam(':product_price', $_POST['update_price']);
-    $update_product_prepare->bindParam(':prodId', $prodId);
-    $update_product_prepare->execute();
-
-    // Respond with success or failure
-    if ($update_product_prepare) {
-        echo json_encode(['success' => true]);
-        exit();
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Error updating record.']);
-        exit();
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -253,31 +219,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_image'])) {
 	<!-- / Update Product Cards -->
 	
 	<!-- Delete Product Cards -->
-	<?php foreach ($single_product as $product): ?>
-<div id="deleteEmployeeModal<?php echo $product['user_id']; ?>" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-		<form action="<?php $_SERVER['PHP_SELF'] ?>" method="post" enctype="multipart/form-data">
-            <div class="modal-header">
-                <h4 class="modal-title">Delete Cards</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+<?php foreach ($single_product as $product): ?>
+    <div id="deleteEmployeeModal<?php echo $product['user_id']; ?>" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Delete Cards</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete these Records?</p>
+                    <p class="text-warning"><small>This action cannot be undone.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <!-- Cancel button to close the modal -->
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <!-- Delete button using JavaScript -->
+                    <button type="button" class="btn btn-danger" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
+                </div>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete these Records?</p>
-                <p class="text-warning"><small>This action cannot be undone.</small></p>
-            </div>
-            <div class="modal-footer">
-                <!-- Cancel button to close the modal -->
-                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-
-                <!-- Delete button using JavaScript -->
-				<button type="button" class="btn btn-danger" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
-
-            </div>
-			</form>
         </div>
     </div>
-</div>
 <?php endforeach; ?>
 <!-- / Delete Product Cards -->
 
@@ -358,19 +320,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_image'])) {
     }
 </script>
 
-	<script>
-function deleteProduct(prodId) {
+<script>
+    function deleteProduct(prodId) {
         $.ajax({
             type: 'POST',
-            url: 'index.php', 
+            url: 'index.php',
             data: { prodId: prodId },
             success: function(response) {
                 const result = JSON.parse(response);
                 if (result.success) {
-                    window.location.href = 'index.php';
+                    // Remove the modal from the DOM
+                    $('#deleteEmployeeModal' + prodId).modal('hide');
+                    // Optionally, update the UI in real-time
+                    // You can update specific elements or reload the entire page
+                    location.reload(); // Reload the entire page
                 } else {
                     alert(result.message);
                 }
+            },
+            error: function() {
+                alert('Error deleting record.');
             }
         });
     }
