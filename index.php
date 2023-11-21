@@ -280,7 +280,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_image'])) {
                     <!-- Cancel button to close the modal -->
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                     <!-- Delete button using JavaScript -->
-                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteEmployeeModal<?php echo $product['user_id']; ?>" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" data-toggle="modal" data-target="#deleteEmployeeModal<?php echo $product['user_id']; ?>" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
                 </div>
             </div>
         </div>
