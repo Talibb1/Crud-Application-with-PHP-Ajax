@@ -39,6 +39,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
  //  Delete section ending
 
 ?>
+<!-- PHP Code -->
+<?php
+// Update existing data if the form is submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_image'])) {
+    // Handle image upload
+    $uploadedFile = ""; // Initialize as an empty string
+
+    if ($_FILES['update_image']['name'] !== "") {
+        $uploadDir = "Assets/img/";
+        $uploadedFile = $uploadDir . basename($_FILES['update_image']['name']);
+        move_uploaded_file($_FILES['update_image']['tmp_name'], $uploadedFile);
+    }
+
+    // Update image in the database
+    $update_image_query = "UPDATE `crud_application` SET `product_image` = :product_image WHERE `user_id` = :prodId";
+    $update_image_prepare = $connection->prepare($update_image_query);
+    $update_image_prepare->bindParam(':product_image', $_FILES['update_image']['name']);
+    $update_image_prepare->bindParam(':prodId', $prodId);
+    $update_image_success = $update_image_prepare->execute();
+
+    // Update the rest of the product information
+    $update_product_query = "UPDATE `crud_application` SET 
+        `product_name` = :product_name, 
+        `product_description` = :product_description, 
+        `product_price` = :product_price
+        WHERE `user_id` = :prodId";
+
+    $update_product_prepare = $connection->prepare($update_product_query);
+    $update_product_prepare->bindParam(':product_name', $_POST['update_name']);
+    $update_product_prepare->bindParam(':product_description', $_POST['update_description']);
+    $update_product_prepare->bindParam(':product_price', $_POST['update_price']);
+    $update_product_prepare->bindParam(':prodId', $prodId);
+    $update_product_success = $update_product_prepare->execute();
+
+    // Respond with success or failure
+    if ($update_image_success && $update_product_success) {
+        echo json_encode(['success' => true]);
+        exit();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Error updating record.']);
+        exit();
+    }
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -54,6 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="Assets/css/card_style.css">
 	<link rel="stylesheet" href="Assets/css/crud_style.css">
+	
 
 </head>
 
@@ -174,17 +219,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
 
 	<!-- Update Product Cards -->
 	<?php foreach ($single_product as $product): ?>
-	<div id="editEmployeeModal<?php echo $product['user_id']; ?>" class="modal fade">
-		<div class="modal-dialog">
-			<div class="modal-content">
-			<form id="updateForm<?php echo $product['user_id']; ?>" action="Update.php" method="post" enctype="multipart/form-data">
-					<input type="hidden" name="id" value="<?php echo $product['user_id']; ?>">
-
-					<div class="modal-header">
-						<h4 class="modal-title">Update Product Card</h4>
-						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-					</div>
-					<div class="modal-body">
+    <div id="editEmployeeModal<?php echo $product['user_id']; ?>" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="updateForm<?php echo $product['user_id']; ?>" action="Update.php" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="id" value="<?php echo $product['user_id']; ?>">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Update Product Card</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    </div>
+                    <div class="modal-body">
 						<div class="form-group">
 							<label>Product Name</label>
 							<input type="text" name="update_name" value="<?php echo $product['product_name']; ?>"
@@ -207,11 +251,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
 								class="form-control">
 						</div>
 					</div>
-					<div class="modal-footer">
-						<input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
-						<button type="button" class="btn btn-info" onclick="updateProduct(<?php echo $product['user_id']; ?>)">Save</button>
-					</div>
-				</form>
+					 <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <!-- Update button with data-target and onclick -->
+                        <button type="button" class="btn btn-info" data-dismiss="modal" data-target="#editEmployeeModal<?php echo $product['user_id']; ?>" onclick="updateProduct(<?php echo $product['user_id']; ?>)">Save</button>
+                    </div>
+                </form>
 			</div>
 		</div>
 	</div>
@@ -235,7 +280,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
                     <!-- Cancel button to close the modal -->
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                     <!-- Delete button using JavaScript -->
-                    <button type="button" class="btn btn-danger" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
+                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteEmployeeModal<?php echo $product['user_id']; ?>" onclick="deleteProduct(<?php echo $product['user_id']; ?>)">Delete</button>
                 </div>
             </div>
         </div>
@@ -286,9 +331,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
 	</div>
 	<!-- / View Product Cards -->
 	<?php endforeach; ?>
-	
-	
-	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="Assets/js/crud.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
@@ -320,6 +363,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
     }
 </script>
 
+
 <script>
     function deleteProduct(prodId) {
         $.ajax({
@@ -343,7 +387,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['prodId'])) {
             }
         });
     }
-	
+
 </script>
 
 
